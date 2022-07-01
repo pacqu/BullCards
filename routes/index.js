@@ -47,7 +47,13 @@ router.get('/lastgames', function (req, res, next) {
   axios.get(BASE_URL + "schedule/", {
     params: schedParams
   }).then(result => {
-      res.json(result.data)
+      //res.json(result.data)
+      const games = []
+      //console.log(result.data.dates)
+      result.data.dates.forEach(date => {
+        date.games.forEach(game => games.push(game))
+      })
+      res.json(games)
   }).catch(err => console.log(err));
 });
 
@@ -62,7 +68,10 @@ router.get('/pitchcounts', function (req, res, next) {
       const boxscore = game.data.liveData.boxscore
       const team = boxscore.teams.away.team.id === teamId ? boxscore.teams.away : boxscore.teams.home
       const pitchers = Object.values(team.players).filter(player => player.position.code === '1' && Object.keys(player.stats.pitching).length)
-      counts[gameId] = pitchers 
+      const pitcherCounts = {}
+      pitchers.forEach(pitcher => pitcherCounts[pitcher.person.id] = pitcher.stats)
+      const pitcherIds = pitchers.map(pitcher => pitcher.person.id)
+      counts[gameId] = {pitcherIds: pitcherIds, pitcherCounts: pitcherCounts} 
     })
     res.send(counts)
   }).catch(err => {console.log(err); res.send(err)})
