@@ -51,7 +51,9 @@ router.get('/lastgames', function (req, res, next) {
       const games = []
       //console.log(result.data.dates)
       result.data.dates.forEach(date => {
-        date.games.forEach(game => games.push(game))
+        date.games.forEach(game => {
+          if (game.status.codedGameState != 'D') games.push(game)
+        })
       })
       res.json(games)
   }).catch(err => console.log(err));
@@ -59,7 +61,8 @@ router.get('/lastgames', function (req, res, next) {
 
 router.get('/pitchcounts', function (req, res, next) {
   const gameIds = req.query.gameIds ? req.query.gameIds : [661300, 661893]
-  const teamId = req.query.teamId ? req.query.teamId : 147
+  const teamId = req.query.teamId ? parseInt(req.query.teamId) : 147
+  console.log(teamId)
   Promise.all(gameIds.map(id => axios.get("http://statsapi.mlb.com/api/v1.1/" + `game/${id}/feed/live`)))
   .then(results => {
     const counts = {}
@@ -69,9 +72,13 @@ router.get('/pitchcounts', function (req, res, next) {
       const team = boxscore.teams.away.team.id === teamId ? boxscore.teams.away : boxscore.teams.home
       const pitchers = Object.values(team.players).filter(player => player.position.code === '1' && Object.keys(player.stats.pitching).length)
       const pitcherCounts = {}
-      pitchers.forEach(pitcher => pitcherCounts[pitcher.person.id] = pitcher.stats)
+      const pitcherInfo = {}
+      pitchers.forEach(pitcher => {
+        pitcherCounts[pitcher.person.id] = pitcher.stats
+        pitcherInfo[pitcher.person.id] = pitcher.person
+      })
       const pitcherIds = pitchers.map(pitcher => pitcher.person.id)
-      counts[gameId] = {pitcherIds: pitcherIds, pitcherCounts: pitcherCounts} 
+      counts[gameId] = {pitcherIds: pitcherIds, pitcherCounts: pitcherCounts, pitcherInfo: pitcherInfo} 
     })
     res.send(counts)
   }).catch(err => {console.log(err); res.send(err)})
